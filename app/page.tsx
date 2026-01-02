@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { AddVideoForm } from '@/components/AddVideoForm';
+import { EditVideoForm } from '@/components/EditVideoForm';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 interface Video {
@@ -17,6 +19,7 @@ export default function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVideos();
@@ -41,6 +44,34 @@ export default function Home() {
     fetchVideos();
   };
 
+  const handleVideoUpdated = () => {
+    setEditingVideoId(null);
+    fetchVideos();
+  };
+
+  const handleDeleteVideo = async (videoId: string, videoTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${videoTitle}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Video deleted successfully');
+        fetchVideos();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to delete video');
+      }
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      alert('Failed to delete video');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
@@ -51,19 +82,31 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {showAddForm ? 'Hide Form' : 'Add New Video'}
-          </button>
-        </div>
-
-        {showAddForm && (
+        {editingVideoId ? (
           <div className="mb-8">
-            <AddVideoForm onVideoAdded={handleVideoAdded} />
+            <EditVideoForm
+              videoId={editingVideoId}
+              onVideoUpdated={handleVideoUpdated}
+              onCancel={() => setEditingVideoId(null)}
+            />
           </div>
+        ) : (
+          <>
+            <div className="mb-8">
+              <button
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {showAddForm ? 'Hide Form' : 'Add New Video'}
+              </button>
+            </div>
+
+            {showAddForm && (
+              <div className="mb-8">
+                <AddVideoForm onVideoAdded={handleVideoAdded} />
+              </div>
+            )}
+          </>
         )}
 
         <div>
@@ -78,8 +121,8 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {videos.map((video) => (
-                <Link key={video.id} href={`/watch/${video.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <Card key={video.id} className="hover:shadow-lg transition-shadow h-full flex flex-col">
+                  <Link href={`/watch/${video.id}`} className="flex-1">
                     <CardContent className="p-4">
                       {video.thumbnailUrl ? (
                         <img
@@ -102,8 +145,35 @@ export default function Home() {
                         Added: {new Date(video.createdAt).toLocaleDateString()}
                       </p>
                     </CardContent>
-                  </Card>
-                </Link>
+                  </Link>
+                  
+                  {/* Action Buttons */}
+                  <div className="p-4 pt-0 flex gap-2">
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setEditingVideoId(video.id);
+                        setShowAddForm(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteVideo(video.id, video.title);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
               ))}
             </div>
           )}

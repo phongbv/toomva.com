@@ -9,6 +9,7 @@ interface VideoPlayerProps {
   onTimeUpdate?: (currentTime: number) => void;
   onWordClick?: (word: string) => void;
   seekTo?: number | null;
+  onVideoRefReady?: (ref: React.RefObject<HTMLVideoElement | null>) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -17,10 +18,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onTimeUpdate,
   onWordClick,
   seekTo,
+  onVideoRefReady,
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [currentSubtitle, setCurrentSubtitle] = useState<SubtitleEntry | null>(null);
+  const [isHoveringWord, setIsHoveringWord] = useState(false);
+
+  useEffect(() => {
+    if (onVideoRefReady && videoRef) {
+      onVideoRefReady(videoRef);
+    }
+  }, [onVideoRefReady]);
 
   useEffect(() => {
     if (seekTo !== null && seekTo !== undefined && videoRef.current) {
@@ -43,11 +52,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+  const handleWordHover = (e: React.MouseEvent<HTMLSpanElement>) => {
     const word = (e.target as HTMLSpanElement).textContent || '';
     if (word && onWordClick) {
-      // Pause video when clicking on a word
+      // Pause video when hovering on a word
       videoRef.current?.pause();
+      setIsHoveringWord(true);
       onWordClick(word.trim());
     }
   };
@@ -71,7 +81,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return (
             <span
               key={index}
-              onClick={handleWordClick}
+              onMouseEnter={handleWordHover}
               className="cursor-pointer hover:bg-blue-200 hover:text-blue-800 transition-colors px-0.5 rounded"
             >
               {word}

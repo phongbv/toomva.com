@@ -1,20 +1,27 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SubtitleEntry } from '@/domain/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface AddVideoFormProps {
-  onVideoAdded: () => void;
+interface EditVideoFormProps {
+  videoId: string;
+  onVideoUpdated: () => void;
+  onCancel: () => void;
 }
 
-export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
+export const EditVideoForm: React.FC<EditVideoFormProps> = ({ 
+  videoId, 
+  onVideoUpdated,
+  onCancel 
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [englishSubtitles, setEnglishSubtitles] = useState('');
   const [vietnameseSubtitles, setVietnameseSubtitles] = useState('');
   const [englishSubtitleUrl, setEnglishSubtitleUrl] = useState('');
@@ -22,48 +29,93 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
   const [useUrlForEnglish, setUseUrlForEnglish] = useState(false);
   const [useUrlForVietnamese, setUseUrlForVietnamese] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingVideo, setIsFetchingVideo] = useState(true);
   const [isFetchingSubtitles, setIsFetchingSubtitles] = useState(false);
+
+  useEffect(() => {
+    fetchVideoData();
+  }, [videoId]);
+
+  const fetchVideoData = async () => {
+    try {
+      const response = await fetch(`/api/videos/${videoId}`);
+      if (response.ok) {
+        const video = await response.json();
+        setTitle(video.title || '');
+        setDescription(video.description || '');
+        setVideoUrl(video.videoUrl || '');
+        setThumbnailUrl(video.thumbnailUrl || '');
+        
+        // Convert subtitles back to SRT format for editing
+        if (video.subtitles?.english?.length > 0) {
+          setEnglishSubtitles(convertToSRT(video.subtitles.english));
+        }
+        if (video.subtitles?.vietnamese?.length > 0) {
+          setVietnameseSubtitles(convertToSRT(video.subtitles.vietnamese));
+        }
+      } else {
+        alert('Failed to load video data');
+      }
+    } catch (error) {
+      console.error('Error fetching video:', error);
+      alert('Failed to load video data');
+    } finally {
+      setIsFetchingVideo(false);
+    }
+  };
+
+  const convertToSRT = (subtitles: SubtitleEntry[]): string => {
+    return subtitles
+      .map((sub, index) => {
+        const startTime = formatTime(sub.startTime);
+        const endTime = formatTime(sub.endTime);
+        const text = sub.textEn || sub.textVi;
+        return `${index + 1}\n${startTime} --> ${endTime}\n${text}\n`;
+      })
+      .join('\n');
+  };
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const millis = Math.floor((seconds % 1) * 1000);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
+  };
 
   const parseSRT = (srtContent: string): SubtitleEntry[] => {
     const entries: SubtitleEntry[] = [];
     
-    // Remove WEBVTT header if present
     let content = srtContent.trim();
     const isVTT = content.startsWith('WEBVTT');
     if (isVTT) {
       content = content.replace(/^WEBVTT[^\n]*\n+/, '');
     }
     
-    // Remove NOTE blocks (VTT metadata)
     content = content.replace(/NOTE\s+[^\n]*\n+/g, '');
     
-    // Split by double newlines (SRT format) or parse line by line (VTT format)
     const lines = content.split('\n');
     let i = 0;
     
     while (i < lines.length) {
       const line = lines[i].trim();
       
-      // Skip empty lines
       if (!line) {
         i++;
         continue;
       }
       
-      // Check if this line or next line contains time code
       let timeLineIndex = -1;
       let timeLine = '';
       
-      // Check current line for time code
       if (line.includes('-->')) {
         timeLineIndex = i;
         timeLine = line;
       }
-      // Check next line for time code (numbered entries)
       else if (i + 1 < lines.length && lines[i + 1].includes('-->')) {
         timeLineIndex = i + 1;
         timeLine = lines[i + 1];
-        i++; // Skip the number line
+        i++;
       }
       
       if (timeLineIndex === -1) {
@@ -71,7 +123,6 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         continue;
       }
 
-      // Parse time line (supports both SRT and VTT formats)
       const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})/);
       
       if (!timeMatch) {
@@ -91,19 +142,16 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         parseInt(timeMatch[7]) +
         parseInt(timeMatch[8]) / 1000;
 
-      // Collect text lines until we hit an empty line or next entry
-      i++; // Move to first text line
+      i++;
       const textLines: string[] = [];
       
       while (i < lines.length) {
         const textLine = lines[i].trim();
         
-        // Stop if we hit an empty line (entry separator)
         if (!textLine) {
           break;
         }
         
-        // Stop if we hit the next entry number or time code
         if (/^\d+$/.test(textLine) && i + 1 < lines.length && lines[i + 1].includes('-->')) {
           break;
         }
@@ -115,11 +163,10 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         i++;
       }
       
-      // Clean and join text
       let text = textLines
         .map(line => line
-          .replace(/<[^>]*>/g, '') // Remove HTML tags
-          .replace(/&nbsp;/g, ' ') // Replace HTML entities
+          .replace(/<[^>]*>/g, '')
+          .replace(/&nbsp;/g, ' ')
           .replace(/&amp;/g, '&')
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
@@ -127,7 +174,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           .trim()
         )
         .filter(line => line.length > 0)
-        .join(' '); // Join with space for single-line subtitle display
+        .join(' ');
 
       if (!text) continue;
 
@@ -144,7 +191,6 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
 
   const fetchSubtitleFromUrl = async (url: string): Promise<string> => {
     try {
-      // Call server-side API to bypass CORS
       const response = await fetch(`/api/fetch-subtitle?url=${encodeURIComponent(url)}`);
       const data = await response.json();
       
@@ -191,7 +237,6 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
     setIsLoading(true);
 
     try {
-      // Fetch subtitles from URL if needed
       let finalEnglishSubs = englishSubtitles;
       let finalVietnameseSubs = vietnameseSubtitles;
 
@@ -203,10 +248,9 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         finalVietnameseSubs = await fetchSubtitleFromUrl(vietnameseSubtitleUrl);
       }
 
-      const englishEntries = parseSRT(finalEnglishSubs);
-      const vietnameseEntries = parseSRT(finalVietnameseSubs);
+      const englishEntries = finalEnglishSubs ? parseSRT(finalEnglishSubs) : [];
+      const vietnameseEntries = finalVietnameseSubs ? parseSRT(finalVietnameseSubs) : [];
 
-      // Merge entries
       const mergedEntries: SubtitleEntry[] = englishEntries.map((enEntry, index) => ({
         startTime: enEntry.startTime,
         endTime: enEntry.endTime,
@@ -214,8 +258,8 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         textVi: vietnameseEntries[index]?.textEn || '',
       }));
 
-      const response = await fetch('/api/videos', {
-        method: 'POST',
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -223,6 +267,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           title,
           description,
           videoUrl,
+          thumbnailUrl,
           subtitles: {
             english: mergedEntries,
             vietnamese: mergedEntries,
@@ -232,34 +277,33 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create video');
+        throw new Error(error.error || 'Failed to update video');
       }
 
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setVideoUrl('');
-      setEnglishSubtitles('');
-      setVietnameseSubtitles('');
-      setEnglishSubtitleUrl('');
-      setVietnameseSubtitleUrl('');
-      setUseUrlForEnglish(false);
-      setUseUrlForVietnamese(false);
-      
-      onVideoAdded();
-      alert('Video added successfully!');
+      onVideoUpdated();
+      alert('Video updated successfully!');
     } catch (error: any) {
-      console.error('Error adding video:', error);
-      alert(error.message || 'Failed to add video');
+      console.error('Error updating video:', error);
+      alert(error.message || 'Failed to update video');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isFetchingVideo) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <p>Loading video data...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add New Video</CardTitle>
+        <CardTitle>Edit Video</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -269,6 +313,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter video title"
               required
             />
           </div>
@@ -279,120 +324,126 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter video description"
             />
           </div>
 
           <div>
-            <Label htmlFor="videoUrl">Video URL (MP4) *</Label>
+            <Label htmlFor="videoUrl">Video URL *</Label>
             <Input
               id="videoUrl"
-              type="url"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              required
               placeholder="https://example.com/video.mp4"
+              required
             />
           </div>
 
-          {/* English Subtitles Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="englishSubs">English Subtitles (SRT or VTT) *</Label>
-              <div className="flex items-center gap-2">
+          <div>
+            <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
+            <Input
+              id="thumbnailUrl"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="https://example.com/thumbnail.jpg"
+            />
+          </div>
+
+          {/* English Subtitles */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>English Subtitles (SRT or VTT) *</Label>
+              <label className="flex items-center text-sm">
                 <input
                   type="checkbox"
-                  id="useUrlForEnglish"
                   checked={useUrlForEnglish}
                   onChange={(e) => setUseUrlForEnglish(e.target.checked)}
-                  className="cursor-pointer"
+                  className="mr-2"
                 />
-                <label htmlFor="useUrlForEnglish" className="text-sm cursor-pointer">
-                  Import from URL
-                </label>
-              </div>
+                Import from URL
+              </label>
             </div>
 
             {useUrlForEnglish ? (
               <div className="flex gap-2">
                 <Input
-                  type="url"
                   value={englishSubtitleUrl}
                   onChange={(e) => setEnglishSubtitleUrl(e.target.value)}
-                  placeholder="https://example.com/subtitles-en.srt or .vtt"
-                  required={useUrlForEnglish}
+                  placeholder="https://example.com/subtitle_en.srt or .vtt"
                 />
                 <Button
                   type="button"
                   onClick={handleFetchEnglishSubtitle}
                   disabled={isFetchingSubtitles || !englishSubtitleUrl.trim()}
-                  className="whitespace-nowrap"
                 >
-                  {isFetchingSubtitles ? 'Loading...' : 'Fetch'}
+                  Fetch
                 </Button>
               </div>
             ) : (
               <textarea
-                id="englishSubs"
                 value={englishSubtitles}
                 onChange={(e) => setEnglishSubtitles(e.target.value)}
+                placeholder="Paste English subtitles (SRT or VTT format)"
+                className="w-full min-h-[150px] p-3 border rounded-md font-mono text-sm"
                 required={!useUrlForEnglish}
-                className="w-full min-h-[150px] p-2 border rounded-md font-mono text-sm"
-                placeholder="SRT or VTT format&#10;WEBVTT&#10;&#10;1&#10;00:00:01.000 --> 00:00:04.000&#10;Hello World"
               />
             )}
           </div>
 
-          {/* Vietnamese Subtitles Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="vietnameseSubs">Vietnamese Subtitles (SRT or VTT) *</Label>
-              <div className="flex items-center gap-2">
+          {/* Vietnamese Subtitles */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Vietnamese Subtitles (SRT or VTT) *</Label>
+              <label className="flex items-center text-sm">
                 <input
                   type="checkbox"
-                  id="useUrlForVietnamese"
                   checked={useUrlForVietnamese}
                   onChange={(e) => setUseUrlForVietnamese(e.target.checked)}
-                  className="cursor-pointer"
+                  className="mr-2"
                 />
-                <label htmlFor="useUrlForVietnamese" className="text-sm cursor-pointer">
-                  Import from URL
-                </label>
-              </div>
+                Import from URL
+              </label>
             </div>
 
             {useUrlForVietnamese ? (
               <div className="flex gap-2">
                 <Input
-                  type="url"
                   value={vietnameseSubtitleUrl}
                   onChange={(e) => setVietnameseSubtitleUrl(e.target.value)}
-                  placeholder="https://example.com/subtitles-vi.srt or .vtt"
-                  required={useUrlForVietnamese}
+                  placeholder="https://example.com/subtitle_vi.srt or .vtt"
                 />
                 <Button
                   type="button"
                   onClick={handleFetchVietnameseSubtitle}
                   disabled={isFetchingSubtitles || !vietnameseSubtitleUrl.trim()}
-                  className="whitespace-nowrap"
                 >
-                  {isFetchingSubtitles ? 'Loading...' : 'Fetch'}
+                  Fetch
                 </Button>
               </div>
             ) : (
               <textarea
-                id="vietnameseSubs"
                 value={vietnameseSubtitles}
                 onChange={(e) => setVietnameseSubtitles(e.target.value)}
+                placeholder="Paste Vietnamese subtitles (SRT or VTT format)"
+                className="w-full min-h-[150px] p-3 border rounded-md font-mono text-sm"
                 required={!useUrlForVietnamese}
-                className="w-full min-h-[150px] p-2 border rounded-md font-mono text-sm"
-                placeholder="SRT or VTT format&#10;WEBVTT&#10;&#10;1&#10;00:00:01.000 --> 00:00:04.000&#10;Xin chào thế giới"
               />
             )}
           </div>
 
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Adding...' : 'Add Video'}
-          </Button>
+          <div className="flex gap-3 pt-4">
+            <Button type="submit" disabled={isLoading} className="flex-1">
+              {isLoading ? 'Updating...' : 'Update Video'}
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

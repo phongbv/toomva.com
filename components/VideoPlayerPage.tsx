@@ -16,6 +16,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ videoId }) => 
   const [currentTime, setCurrentTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
   
   // Dictionary popup state
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false);
@@ -73,7 +74,10 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ videoId }) => 
   };
 
   const handleContinuePlaying = () => {
-    // Video will continue when popup closes
+    // Auto-play video when dictionary popup closes
+    if (videoRef.current) {
+      videoRef.current.play();
+    }
   };
 
   if (isLoading) {
@@ -109,6 +113,9 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({ videoId }) => 
             onTimeUpdate={setCurrentTime}
             onWordClick={handleWordClick}
             seekTo={seekTo}
+            onVideoRefReady={(ref) => {
+              videoRef.current = ref.current;
+            }}
           />
         </div>
 

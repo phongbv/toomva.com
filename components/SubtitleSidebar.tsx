@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SubtitleEntry } from '@/domain/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,9 @@ export const SubtitleSidebar: React.FC<SubtitleSidebarProps> = ({
   currentTime,
   onSubtitleClick,
 }) => {
+  const activeRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -26,21 +29,55 @@ export const SubtitleSidebar: React.FC<SubtitleSidebarProps> = ({
     return currentTime >= subtitle.startTime && currentTime <= subtitle.endTime;
   };
 
+  // Find current subtitle index
+  const currentIndex = subtitles.findIndex(subtitle => isActive(subtitle));
+
+  // Calculate display range: show 2 subtitles above current one
+  const startIndex = Math.max(0, currentIndex - 2);
+  const displayedSubtitles = currentIndex >= 0 
+    ? subtitles.slice(startIndex) 
+    : subtitles;
+
+  // Auto-scroll to active subtitle
+  useEffect(() => {
+    if (activeRef.current && scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        const activeElement = activeRef.current;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const activeRect = activeElement.getBoundingClientRect();
+        
+        // Check if active element is outside viewport
+        if (activeRect.top < containerRect.top || activeRect.bottom > containerRect.bottom) {
+          activeElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
+      }
+    }
+  }, [currentIndex]);
+
   return (
     <div className="h-full border-l bg-gray-50">
       <div className="p-4 border-b bg-white">
         <h2 className="text-lg font-semibold">Subtitles Timeline</h2>
       </div>
       
-      <ScrollArea className="h-[calc(100%-4rem)]">
+      <ScrollArea ref={scrollAreaRef} className="h-[calc(100%-4rem)]">
         <div className="p-4 space-y-2">
-          {subtitles.map((subtitle, index) => (
+          {displayedSubtitles.map((subtitle, index) => {
+            const originalIndex = startIndex + index;
+            const isCurrentActive = isActive(subtitle);
+            
+            return (
             <div
-              key={index}
+              key={originalIndex}
+              ref={isCurrentActive ? activeRef : null}
               onClick={() => onSubtitleClick(subtitle.startTime)}
               className={cn(
                 'p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md',
-                isActive(subtitle)
+                isCurrentActive
                   ? 'bg-blue-100 border-blue-400 shadow-sm'
                   : 'bg-white border-gray-200 hover:border-gray-300'
               )}
@@ -55,7 +92,8 @@ export const SubtitleSidebar: React.FC<SubtitleSidebarProps> = ({
                 {subtitle.textVi}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </ScrollArea>
     </div>

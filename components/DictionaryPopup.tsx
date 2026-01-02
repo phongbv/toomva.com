@@ -23,8 +23,16 @@ export const DictionaryPopup: React.FC<DictionaryPopupProps> = ({
   onClose,
   onContinue,
 }) => {
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      // Auto-continue when closing
+      onContinue();
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Dictionary: {word}</DialogTitle>
