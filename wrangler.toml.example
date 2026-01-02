@@ -1,0 +1,19 @@
+name = "toomva-db"
+compatibility_date = "2024-01-01"
+
+# Pages Configuration
+pages_build_output_dir = ".vercel/output/static"
+
+# D1 Database Bindings
+[[d1_databases]]
+binding = "DB"
+database_name = "toomva-db"
+database_id = "" # Will be filled after running: wrangler d1 create toomva-db
+# Get the database_id from the command output and paste it here
+
+# Environment Variables
+[vars]
+NODE_ENV = "production"
+
+# For local development with D1
+# Run: wrangler pages dev .vercel/output/static --d1 DB=toomva-db

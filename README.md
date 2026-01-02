@@ -41,22 +41,47 @@
 
 ## Cài đặt
 
+### Development (SQLite)
+
 1. **Clone và cài đặt dependencies**:
 ```bash
 npm install
 ```
 
-2. **Setup database**:
+2. **Tạo file .env**:
 ```bash
-npx prisma migrate dev
+cp .env.example .env
 ```
 
-3. **Chạy development server**:
+3. **Setup database**:
+```bash
+npm run db:migrate
+npm run db:generate
+```
+
+4. **Chạy development server**:
 ```bash
 npm run dev
 ```
 
-4. **Mở trình duyệt**: http://localhost:3000
+5. **Mở trình duyệt**: http://localhost:3000
+
+### Production (Cloudflare D1)
+
+Xem hướng dẫn chi tiết tại [D1_SETUP.md](D1_SETUP.md)
+
+```bash
+# 1. Tạo D1 database
+npm run d1:create
+
+# 2. Copy database_id vào wrangler.toml
+
+# 3. Apply migrations
+npm run d1:migrate
+
+# 4. Deploy
+npm run build
+```
 
 ## Chạy tests
 
