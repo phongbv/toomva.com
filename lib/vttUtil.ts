@@ -2,17 +2,26 @@ import { SubtitleEntry } from "@/domain/types";
 
 
 export function parseSubtitles(rawString: string): SubtitleEntry[] {
+  // Remove WEBVTT header if present
+  let content = rawString.trim();
+  if (content.startsWith('WEBVTT')) {
+    // Remove WEBVTT line and any metadata/blank lines until first subtitle
+    content = content.replace(/^WEBVTT[^\n]*\n+/, '');
+  }
+  
   // Split by double newlines and filter out empty strings
-  const blocks = rawString.trim().split(/\n\s*\n/);
+  const blocks = content.split(/\n\s*\n/);
   
   return blocks.reduce((acc: SubtitleEntry[], block) => {
     const lines = block.split(/\r?\n/).map(l => l.trim());
     
-    // Find the timestamp line (e.g., 00:00:35,116 --> 00:00:37,452)
-    const timeLineIndex = lines.findIndex(line => line.includes('-->'));
+    // Find the timestamp line (e.g., 00:00:35,116 --> 00:00:37,452 or --&gt;)
+    const timeLineIndex = lines.findIndex(line => line.includes('-->') || line.includes('--&gt;'));
     
     if (timeLineIndex !== -1) {
-      const [startStr, endStr] = lines[timeLineIndex].split('-->').map(s => s.trim());
+      // Handle both --> and --&gt; (HTML-encoded)
+      const separator = lines[timeLineIndex].includes('--&gt;') ? '--&gt;' : '-->';
+      const [startStr, endStr] = lines[timeLineIndex].split(separator).map(s => s.trim());
       
       // Text is everything after the timestamp line
       const text = lines.slice(timeLineIndex + 1).join('\n');
