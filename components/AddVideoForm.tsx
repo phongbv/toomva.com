@@ -1,24 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { parseSubtitles } from '@/lib/vttUtil';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parseSubtitles } from "@/lib/vttUtil";
 
 interface AddVideoFormProps {
   onVideoAdded: () => void;
 }
 
 export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [englishSubtitles, setEnglishSubtitles] = useState('');
-  const [vietnameseSubtitles, setVietnameseSubtitles] = useState('');
-  const [englishSubtitleUrl, setEnglishSubtitleUrl] = useState('');
-  const [vietnameseSubtitleUrl, setVietnameseSubtitleUrl] = useState('');
+  const [webUrl, setWebUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [englishSubtitles, setEnglishSubtitles] = useState("");
+  const [vietnameseSubtitles, setVietnameseSubtitles] = useState("");
+  const [englishSubtitleUrl, setEnglishSubtitleUrl] = useState("");
+  const [vietnameseSubtitleUrl, setVietnameseSubtitleUrl] = useState("");
   const [useUrlForEnglish, setUseUrlForEnglish] = useState(true);
   const [useUrlForVietnamese, setUseUrlForVietnamese] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,16 +28,18 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
   const fetchSubtitleFromUrl = async (url: string): Promise<string> => {
     try {
       // Call server-side API to bypass CORS
-      const response = await fetch(`/api/fetch-subtitle?url=${encodeURIComponent(url)}`);
+      const response = await fetch(
+        `/api/fetch-subtitle?url=${encodeURIComponent(url)}`,
+      );
       const data = await response.json();
-      
+
       if (!data.success || !response.ok) {
-        throw new Error(data.error || 'Failed to fetch subtitle');
+        throw new Error(data.error || "Failed to fetch subtitle");
       }
-      
+
       return data.content;
     } catch (error: any) {
-      throw new Error(error.message || 'Failed to fetch subtitle from URL');
+      throw new Error(error.message || "Failed to fetch subtitle from URL");
     }
   };
 
@@ -46,9 +49,9 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
     try {
       const content = await fetchSubtitleFromUrl(englishSubtitleUrl);
       setEnglishSubtitles(content);
-      alert('English subtitle loaded successfully!');
+      alert("English subtitle loaded successfully!");
     } catch (error: any) {
-      alert(error.message || 'Failed to fetch English subtitle');
+      alert(error.message || "Failed to fetch English subtitle");
     } finally {
       setIsFetchingSubtitles(false);
     }
@@ -60,9 +63,9 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
     try {
       const content = await fetchSubtitleFromUrl(vietnameseSubtitleUrl);
       setVietnameseSubtitles(content);
-      alert('Vietnamese subtitle loaded successfully!');
+      alert("Vietnamese subtitle loaded successfully!");
     } catch (error: any) {
-      alert(error.message || 'Failed to fetch Vietnamese subtitle');
+      alert(error.message || "Failed to fetch Vietnamese subtitle");
     } finally {
       setIsFetchingSubtitles(false);
     }
@@ -88,10 +91,10 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
       const englishEntries = parseSubtitles(finalEnglishSubs);
       const vietnameseEntries = parseSubtitles(finalVietnameseSubs);
 
-      const response = await fetch('/api/videos', {
-        method: 'POST',
+      const response = await fetch("/api/videos", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           title,
@@ -106,27 +109,47 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create video');
+        throw new Error(error.error || "Failed to create video");
       }
 
       // Reset form
-      setTitle('');
-      setDescription('');
-      setVideoUrl('');
-      setEnglishSubtitles('');
-      setVietnameseSubtitles('');
-      setEnglishSubtitleUrl('');
-      setVietnameseSubtitleUrl('');
+      setTitle("");
+      setDescription("");
+      setVideoUrl("");
+      setEnglishSubtitles("");
+      setVietnameseSubtitles("");
+      setEnglishSubtitleUrl("");
+      setVietnameseSubtitleUrl("");
       setUseUrlForEnglish(false);
       setUseUrlForVietnamese(false);
-      
+
       onVideoAdded();
-      alert('Video added successfully!');
+      alert("Video added successfully!");
     } catch (error: any) {
-      console.error('Error adding video:', error);
-      alert(error.message || 'Failed to add video');
+      console.error("Error adding video:", error);
+      alert(error.message || "Failed to add video");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const importFromUrl = async () => {
+    if (webUrl.startsWith("https://toomva.com/")) {
+      const response = await fetch("/api/videos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          webUrl,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create video");
+      } else {
+        alert("Added!");
+      }
     }
   };
 
@@ -135,9 +158,25 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
       <CardHeader>
         <CardTitle>Add New Video</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-center flex-col gap-3">
+        <div className="flex flex-center flex-col gap-3">
+          <h1>Import from Toomva.com</h1>
+          <div className="flex gap-3">
+            <Label htmlFor="webUrl">Url</Label>
+            <Input
+              id="webUrl"
+              value={webUrl}
+              onChange={(e) => setWebUrl(e.target.value)}
+              required
+            />
+            <Button onClick={importFromUrl} disabled={!webUrl}>
+              Import
+            </Button>
+          </div>
+        </div>
+        <hr className="mb-5 mt-5" />
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="flex flex-center flex-col gap-3">
             <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
@@ -147,7 +186,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
             />
           </div>
 
-          <div>
+          <div className="flex flex-center flex-col gap-3">
             <Label htmlFor="description">Description</Label>
             <Input
               id="description"
@@ -156,7 +195,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
             />
           </div>
 
-          <div>
+          <div className="flex flex-center flex-col gap-3">
             <Label htmlFor="videoUrl">Video URL (MP4) *</Label>
             <Input
               id="videoUrl"
@@ -171,7 +210,9 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           {/* English Subtitles Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="englishSubs">English Subtitles (SRT or VTT) *</Label>
+              <Label htmlFor="englishSubs">
+                English Subtitles (SRT or VTT) *
+              </Label>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -180,7 +221,10 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
                   onChange={(e) => setUseUrlForEnglish(e.target.checked)}
                   className="cursor-pointer"
                 />
-                <label htmlFor="useUrlForEnglish" className="text-sm cursor-pointer">
+                <label
+                  htmlFor="useUrlForEnglish"
+                  className="text-sm cursor-pointer"
+                >
                   Import from URL
                 </label>
               </div>
@@ -201,7 +245,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
                   disabled={isFetchingSubtitles || !englishSubtitleUrl.trim()}
                   className="whitespace-nowrap"
                 >
-                  {isFetchingSubtitles ? 'Loading...' : 'Fetch'}
+                  {isFetchingSubtitles ? "Loading..." : "Fetch"}
                 </Button>
               </div>
             ) : (
@@ -219,7 +263,9 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           {/* Vietnamese Subtitles Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="vietnameseSubs">Vietnamese Subtitles (SRT or VTT) *</Label>
+              <Label htmlFor="vietnameseSubs">
+                Vietnamese Subtitles (SRT or VTT) *
+              </Label>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -228,7 +274,10 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
                   onChange={(e) => setUseUrlForVietnamese(e.target.checked)}
                   className="cursor-pointer"
                 />
-                <label htmlFor="useUrlForVietnamese" className="text-sm cursor-pointer">
+                <label
+                  htmlFor="useUrlForVietnamese"
+                  className="text-sm cursor-pointer"
+                >
                   Import from URL
                 </label>
               </div>
@@ -246,10 +295,12 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
                 <Button
                   type="button"
                   onClick={handleFetchVietnameseSubtitle}
-                  disabled={isFetchingSubtitles || !vietnameseSubtitleUrl.trim()}
+                  disabled={
+                    isFetchingSubtitles || !vietnameseSubtitleUrl.trim()
+                  }
                   className="whitespace-nowrap"
                 >
-                  {isFetchingSubtitles ? 'Loading...' : 'Fetch'}
+                  {isFetchingSubtitles ? "Loading..." : "Fetch"}
                 </Button>
               </div>
             ) : (
@@ -265,7 +316,7 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           </div>
 
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Adding...' : 'Add Video'}
+            {isLoading ? "Adding..." : "Add Video"}
           </Button>
         </form>
       </CardContent>

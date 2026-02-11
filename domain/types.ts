@@ -37,14 +37,15 @@ export interface VideoWithSubtitles extends Video {
 }
 
 export interface CreateVideoInput {
+  webUrl?: string;
   title: string;
   description?: string;
   videoUrl: string;
   thumbnailUrl?: string;
   duration?: number;
   subtitles: {
-    english: DualSubtitleEntry[];
-    vietnamese: DualSubtitleEntry[];
+    english: SubtitleEntry[];
+    vietnamese: SubtitleEntry[];
   };
 }
 
