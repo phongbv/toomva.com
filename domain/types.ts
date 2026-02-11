@@ -1,9 +1,15 @@
 // Domain Types
-export interface SubtitleEntry {
+export interface DualSubtitleEntry {
   startTime: number; // in seconds
   endTime: number;
   textEn: string;
   textVi: string;
+}
+export interface SubtitleEntry {
+  index: number;
+  startTime: number; // in seconds
+  endTime: number;
+  text: string;
 }
 
 export interface Video {
@@ -37,8 +43,8 @@ export interface CreateVideoInput {
   thumbnailUrl?: string;
   duration?: number;
   subtitles: {
-    english: SubtitleEntry[];
-    vietnamese: SubtitleEntry[];
+    english: DualSubtitleEntry[];
+    vietnamese: DualSubtitleEntry[];
   };
 }
 

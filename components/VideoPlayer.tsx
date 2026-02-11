@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { SubtitleEntry } from '@/domain/types';
+import { DualSubtitleEntry } from '@/domain/types';
 
 interface VideoPlayerProps {
   videoUrl: string;
-  subtitles: SubtitleEntry[];
+  subtitles: DualSubtitleEntry[];
   onTimeUpdate?: (currentTime: number) => void;
   onWordClick?: (word: string) => void;
   seekTo?: number | null;
@@ -22,7 +22,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [currentSubtitle, setCurrentSubtitle] = useState<SubtitleEntry | null>(null);
+  const [currentSubtitle, setCurrentSubtitle] = useState<DualSubtitleEntry | null>(null);
   const [isHoveringWord, setIsHoveringWord] = useState(false);
 
   useEffect(() => {

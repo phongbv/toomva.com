@@ -93,12 +93,12 @@ export default function Home() {
         ) : (
           <>
             <div className="mb-8">
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
+              <Link
+                href={"/video/add"}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 {showAddForm ? 'Hide Form' : 'Add New Video'}
-              </button>
+              </Link>
             </div>
 
             {showAddForm && (

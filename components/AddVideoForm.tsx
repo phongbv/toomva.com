@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SubtitleEntry } from '@/domain/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { parseSubtitles } from '@/lib/vttUtil';
 
 interface AddVideoFormProps {
   onVideoAdded: () => void;
@@ -19,128 +19,10 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
   const [vietnameseSubtitles, setVietnameseSubtitles] = useState('');
   const [englishSubtitleUrl, setEnglishSubtitleUrl] = useState('');
   const [vietnameseSubtitleUrl, setVietnameseSubtitleUrl] = useState('');
-  const [useUrlForEnglish, setUseUrlForEnglish] = useState(false);
-  const [useUrlForVietnamese, setUseUrlForVietnamese] = useState(false);
+  const [useUrlForEnglish, setUseUrlForEnglish] = useState(true);
+  const [useUrlForVietnamese, setUseUrlForVietnamese] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingSubtitles, setIsFetchingSubtitles] = useState(false);
-
-  const parseSRT = (srtContent: string): SubtitleEntry[] => {
-    const entries: SubtitleEntry[] = [];
-    
-    // Remove WEBVTT header if present
-    let content = srtContent.trim();
-    const isVTT = content.startsWith('WEBVTT');
-    if (isVTT) {
-      content = content.replace(/^WEBVTT[^\n]*\n+/, '');
-    }
-    
-    // Remove NOTE blocks (VTT metadata)
-    content = content.replace(/NOTE\s+[^\n]*\n+/g, '');
-    
-    // Split by double newlines (SRT format) or parse line by line (VTT format)
-    const lines = content.split('\n');
-    let i = 0;
-    
-    while (i < lines.length) {
-      const line = lines[i].trim();
-      
-      // Skip empty lines
-      if (!line) {
-        i++;
-        continue;
-      }
-      
-      // Check if this line or next line contains time code
-      let timeLineIndex = -1;
-      let timeLine = '';
-      
-      // Check current line for time code
-      if (line.includes('-->')) {
-        timeLineIndex = i;
-        timeLine = line;
-      }
-      // Check next line for time code (numbered entries)
-      else if (i + 1 < lines.length && lines[i + 1].includes('-->')) {
-        timeLineIndex = i + 1;
-        timeLine = lines[i + 1];
-        i++; // Skip the number line
-      }
-      
-      if (timeLineIndex === -1) {
-        i++;
-        continue;
-      }
-
-      // Parse time line (supports both SRT and VTT formats)
-      const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})/);
-      
-      if (!timeMatch) {
-        i++;
-        continue;
-      }
-
-      const startTime =
-        parseInt(timeMatch[1]) * 3600 +
-        parseInt(timeMatch[2]) * 60 +
-        parseInt(timeMatch[3]) +
-        parseInt(timeMatch[4]) / 1000;
-
-      const endTime =
-        parseInt(timeMatch[5]) * 3600 +
-        parseInt(timeMatch[6]) * 60 +
-        parseInt(timeMatch[7]) +
-        parseInt(timeMatch[8]) / 1000;
-
-      // Collect text lines until we hit an empty line or next entry
-      i++; // Move to first text line
-      const textLines: string[] = [];
-      
-      while (i < lines.length) {
-        const textLine = lines[i].trim();
-        
-        // Stop if we hit an empty line (entry separator)
-        if (!textLine) {
-          break;
-        }
-        
-        // Stop if we hit the next entry number or time code
-        if (/^\d+$/.test(textLine) && i + 1 < lines.length && lines[i + 1].includes('-->')) {
-          break;
-        }
-        if (textLine.includes('-->')) {
-          break;
-        }
-        
-        textLines.push(textLine);
-        i++;
-      }
-      
-      // Clean and join text
-      let text = textLines
-        .map(line => line
-          .replace(/<[^>]*>/g, '') // Remove HTML tags
-          .replace(/&nbsp;/g, ' ') // Replace HTML entities
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .trim()
-        )
-        .filter(line => line.length > 0)
-        .join(' '); // Join with space for single-line subtitle display
-
-      if (!text) continue;
-
-      entries.push({
-        startTime,
-        endTime,
-        textEn: text,
-        textVi: '',
-      });
-    }
-
-    return entries;
-  };
 
   const fetchSubtitleFromUrl = async (url: string): Promise<string> => {
     try {
@@ -203,16 +85,8 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
         finalVietnameseSubs = await fetchSubtitleFromUrl(vietnameseSubtitleUrl);
       }
 
-      const englishEntries = parseSRT(finalEnglishSubs);
-      const vietnameseEntries = parseSRT(finalVietnameseSubs);
-
-      // Merge entries
-      const mergedEntries: SubtitleEntry[] = englishEntries.map((enEntry, index) => ({
-        startTime: enEntry.startTime,
-        endTime: enEntry.endTime,
-        textEn: enEntry.textEn,
-        textVi: vietnameseEntries[index]?.textEn || '',
-      }));
+      const englishEntries = parseSubtitles(finalEnglishSubs);
+      const vietnameseEntries = parseSubtitles(finalVietnameseSubs);
 
       const response = await fetch('/api/videos', {
         method: 'POST',
@@ -224,8 +98,8 @@ export const AddVideoForm: React.FC<AddVideoFormProps> = ({ onVideoAdded }) => {
           description,
           videoUrl,
           subtitles: {
-            english: mergedEntries,
-            vietnamese: mergedEntries,
+            english: englishEntries,
+            vietnamese: vietnameseEntries,
           },
         }),
       });

@@ -4,7 +4,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { SubtitleSidebar } from "@/components/SubtitleSidebar";
 import { DictionaryPopup } from "@/components/DictionaryPopup";
-import { SubtitleEntry, VideoWithSubtitles } from "@/domain/types";
+import {
+  DualSubtitleEntry,
+  SubtitleEntry,
+  VideoWithSubtitles,
+} from "@/domain/types";
 
 interface VideoPlayerPageProps {
   videoId: string;
@@ -14,7 +18,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({
   videoId,
 }) => {
   const [video, setVideo] = useState<VideoWithSubtitles | null>(null);
-  const [subtitles, setSubtitles] = useState<SubtitleEntry[]>([]);
+  const [subtitles, setSubtitles] = useState<DualSubtitleEntry[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [seekTo, setSeekTo] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +30,6 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({
   const [dictionaryHtml, setDictionaryHtml] = useState("");
   const [isLoadingDict, setIsLoadingDict] = useState(false);
 
-
   const fetchVideo = useCallback(async (videoId: string) => {
     try {
       const response = await fetch(`/api/videos/${videoId}`);
@@ -36,10 +39,27 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({
       setVideo(data);
 
       // Parse subtitles
-      const enSubtitle = data.subtitles.find((s) => s.language === "en");
-      if (enSubtitle) {
-        const parsed = JSON.parse(enSubtitle.content) as SubtitleEntry[];
-        setSubtitles(parsed);
+      const enSubtitleContent = data.subtitles.find((s) => s.language === "en");
+      if (enSubtitleContent) {
+        const enSubtitle = JSON.parse(
+          enSubtitleContent.content,
+        ) as SubtitleEntry[];
+        const viSubtitleContent = data.subtitles.find(
+          (s) => s.language === "vi",
+        );
+        const viSubtitle = viSubtitleContent
+          ? (JSON.parse(viSubtitleContent.content) as SubtitleEntry[])
+          : [];
+        const finalSubtitle = enSubtitle.map((item, index) => {
+          const dualSubtitle: DualSubtitleEntry = {
+            startTime: item.startTime,
+            endTime: item.endTime,
+            textEn: item.text,
+            textVi: viSubtitleContent ? viSubtitle[index].text : "",
+          };
+          return dualSubtitle;
+        });
+        setSubtitles(finalSubtitle);
       }
     } catch (error) {
       console.error("Error fetching video:", error);
@@ -52,7 +72,7 @@ export const VideoPlayerPage: React.FC<VideoPlayerPageProps> = ({
   useEffect(() => {
     fetchVideo(videoId);
   }, [videoId, fetchVideo]);
-  
+
   const handleWordClick = async (word: string) => {
     setSelectedWord(word);
     setIsDictionaryOpen(true);

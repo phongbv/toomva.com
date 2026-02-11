@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SubtitleSidebar } from '@/components/SubtitleSidebar';
-import { SubtitleEntry } from '@/domain/types';
+import { DualSubtitleEntry } from '@/domain/types';
 
 describe('SubtitleSidebar', () => {
-  const mockSubtitles: SubtitleEntry[] = [
+  const mockSubtitles: DualSubtitleEntry[] = [
     {
       startTime: 0,
       endTime: 2,

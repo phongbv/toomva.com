@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SubtitleEntry } from '@/domain/types';
+import { DualSubtitleEntry } from '@/domain/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,7 +64,7 @@ export const EditVideoForm: React.FC<EditVideoFormProps> = ({
     }
   };
 
-  const convertToSRT = (subtitles: SubtitleEntry[]): string => {
+  const convertToSRT = (subtitles: DualSubtitleEntry[]): string => {
     return subtitles
       .map((sub, index) => {
         const startTime = formatTime(sub.startTime);
@@ -83,8 +83,8 @@ export const EditVideoForm: React.FC<EditVideoFormProps> = ({
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(millis).padStart(3, '0')}`;
   };
 
-  const parseSRT = (srtContent: string): SubtitleEntry[] => {
-    const entries: SubtitleEntry[] = [];
+  const parseSRT = (srtContent: string): DualSubtitleEntry[] => {
+    const entries: DualSubtitleEntry[] = [];
     
     let content = srtContent.trim();
     const isVTT = content.startsWith('WEBVTT');
@@ -251,7 +251,7 @@ export const EditVideoForm: React.FC<EditVideoFormProps> = ({
       const englishEntries = finalEnglishSubs ? parseSRT(finalEnglishSubs) : [];
       const vietnameseEntries = finalVietnameseSubs ? parseSRT(finalVietnameseSubs) : [];
 
-      const mergedEntries: SubtitleEntry[] = englishEntries.map((enEntry, index) => ({
+      const mergedEntries: DualSubtitleEntry[] = englishEntries.map((enEntry, index) => ({
         startTime: enEntry.startTime,
         endTime: enEntry.endTime,
         textEn: enEntry.textEn,

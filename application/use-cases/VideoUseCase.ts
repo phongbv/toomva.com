@@ -12,7 +12,7 @@ export class VideoUseCase {
     if (!input.videoUrl || input.videoUrl.trim() === '') {
       throw new Error('Video URL is required');
     }
-    if (!input.subtitles.english || input.subtitles.english.length === 0 ||
+    if (!input.subtitles || input.subtitles.english.length === 0 ||
         !input.subtitles.vietnamese || input.subtitles.vietnamese.length === 0) {
       throw new Error('Both English and Vietnamese subtitles are required');
     }

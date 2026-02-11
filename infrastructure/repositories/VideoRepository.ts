@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { IVideoRepository } from '@/domain/repositories/IVideoRepository';
-import { Video, VideoWithSubtitles, CreateVideoInput, UpdateVideoInput, SubtitleEntry } from '@/domain/types';
+import { Video, VideoWithSubtitles, CreateVideoInput, UpdateVideoInput, DualSubtitleEntry } from '@/domain/types';
 
 export class VideoRepository implements IVideoRepository {
   async create(input: CreateVideoInput): Promise<VideoWithSubtitles> {

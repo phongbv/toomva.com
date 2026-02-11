@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { SubtitleEntry } from "@/domain/types";
+import { DualSubtitleEntry } from "@/domain/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface SubtitleSidebarProps {
-  subtitles: SubtitleEntry[];
+  subtitles: DualSubtitleEntry[];
   currentTime: number;
   onSubtitleClick: (time: number) => void;
 }
@@ -27,7 +27,7 @@ export const SubtitleSidebar: React.FC<SubtitleSidebarProps> = ({
   };
 
   const isActive = useCallback(
-    (subtitle: SubtitleEntry): boolean => {
+    (subtitle: DualSubtitleEntry): boolean => {
       return (
         currentTime >= subtitle.startTime && currentTime <= subtitle.endTime
       );
