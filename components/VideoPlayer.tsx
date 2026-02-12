@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useRef, useState, useEffect } from 'react';
-import { DualSubtitleEntry } from '@/domain/types';
+import React, { useRef, useState, useEffect } from "react";
+import { DualSubtitleEntry } from "@/domain/types";
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -22,7 +22,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [currentSubtitle, setCurrentSubtitle] = useState<DualSubtitleEntry | null>(null);
+  const [currentSubtitle, setCurrentSubtitle] =
+    useState<DualSubtitleEntry | null>(null);
   const [isHoveringWord, setIsHoveringWord] = useState(false);
 
   useEffect(() => {
@@ -46,14 +47,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       // Find current subtitle
       const subtitle = subtitles.find(
-        (s) => time >= s.startTime && time <= s.endTime
+        (s) => time >= s.startTime && time <= s.endTime,
       );
       setCurrentSubtitle(subtitle || null);
     }
   };
 
   const handleWordHover = (e: React.MouseEvent<HTMLSpanElement>) => {
-    const word = (e.target as HTMLSpanElement).textContent || '';
+    const word = (e.target as HTMLSpanElement).textContent || "";
     if (word && onWordClick) {
       // Pause video when hovering on a word
       videoRef.current?.pause();
@@ -62,14 +63,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const renderSubtitleWithClickableWords = (text: string, isEnglish: boolean) => {
+  const renderSubtitleWithClickableWords = (
+    text: string,
+    isEnglish: boolean,
+  ) => {
     if (!isEnglish) {
       return <span>{text}</span>;
     }
 
     // Split by spaces and punctuation, keeping the delimiters
     const words = text.split(/(\s+|[.,!?;:])/);
-    
+
     return (
       <>
         {words.map((word, index) => {
@@ -77,7 +81,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           if (/^\s+$/.test(word) || /^[.,!?;:]$/.test(word)) {
             return <span key={index}>{word}</span>;
           }
-          
+
           return (
             <span
               key={index}
@@ -98,10 +102,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ref={videoRef}
         src={videoUrl}
         controls
+        preload="none"
+        autoPlay
         className="w-full rounded-lg"
         onTimeUpdate={handleTimeUpdate}
       />
-      
+
       {/* Dual Subtitles Overlay */}
       {currentSubtitle && (
         <div className="absolute bottom-20 left-0 right-0 text-center px-4">
