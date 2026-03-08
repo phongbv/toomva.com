@@ -1,5 +1,11 @@
 import { SubtitleEntry } from "@/domain/types";
 
+/**
+ * Removes HTML tags from subtitle text
+ */
+function stripHtmlTags(text: string): string {
+  return text.replace(/<[^>]*>/g, '');
+}
 
 export function parseSubtitles(rawString: string): SubtitleEntry[] {
   // Remove WEBVTT header if present
@@ -30,7 +36,7 @@ export function parseSubtitles(rawString: string): SubtitleEntry[] {
         index: acc.length + 1, // Sequential index starting at 1
         startTime: convertToSeconds(startStr),
         endTime: convertToSeconds(endStr),
-        text: text
+        text: stripHtmlTags(text)
       });
     }
     
